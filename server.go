@@ -52,7 +52,7 @@ func (server *Server) servicesRequest() (ServiceResponse, error) {
 	if err != nil {
 		return ServiceResponse{}, fmt.Errorf("unable to send request: %w", err)
 	}
-	response := NewServiceResponse()
+	response := newServiceResponse()
 	err = json.NewDecoder(res.Body).Decode(&response)
 	if err != nil {
 		return ServiceResponse{}, fmt.Errorf("unable to parse response: %w", err)
@@ -96,7 +96,7 @@ func (server *Server) registerRequest(service *Service) (RegisterResponse, error
 	if err != nil {
 		return RegisterResponse{}, fmt.Errorf("unable to send request: %w", err)
 	}
-	response := NewRegisterResponse()
+	response := newRegisterResponse()
 	err = json.NewDecoder(res.Body).Decode(&response)
 	if err != nil {
 		return RegisterResponse{}, fmt.Errorf("unable to parse json: %w", err)

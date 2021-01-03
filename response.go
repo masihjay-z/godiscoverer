@@ -7,12 +7,12 @@ type ServiceResponse struct {
 	Code      int
 }
 
-func (response *ServiceResponse) GetServices() []Service {
-	return response.Data
+func newServiceResponse() ServiceResponse  {
+	return ServiceResponse{}
 }
 
-func NewServiceResponse() ServiceResponse  {
-	return ServiceResponse{}
+func (response *ServiceResponse) GetServices() []Service {
+	return response.Data
 }
 
 type RegisterResponse struct {
@@ -22,10 +22,10 @@ type RegisterResponse struct {
 	Code      int
 }
 
-func (response *RegisterResponse) GetTTL() int64 {
-	return response.Data
+func newRegisterResponse() RegisterResponse  {
+	return RegisterResponse{}
 }
 
-func NewRegisterResponse() RegisterResponse  {
-	return RegisterResponse{}
+func (response *RegisterResponse) GetTTL() int64 {
+	return response.Data
 }

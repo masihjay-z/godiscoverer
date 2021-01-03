@@ -13,7 +13,3 @@ func NewService(name string, host string, port string) Service {
 		Port: port,
 	}
 }
-
-func (service *Service) Register(server *Server) (bool, error) {
-	return server.Register(service)
-}
