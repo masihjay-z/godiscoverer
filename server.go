@@ -18,6 +18,16 @@ type Server struct {
 	lastGettingServices int64
 }
 
+var defaultServer *Server
+
+func SetDefaultServer(server *Server) {
+	defaultServer = server
+}
+
+func GetDefaultServer() *Server {
+	return defaultServer
+}
+
 func NewServer(address string, ttl int64) Server {
 	return Server{Address: address, TTL: ttl, lastRegistration: 0}
 }
