@@ -3,6 +3,7 @@ package godiscoverer
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -31,7 +32,6 @@ func (server *Server) SetAddress(address string) *Server {
 }
 
 func (server *Server) GetServices() ([]Service, error) {
-	fmt.Println(server.lastGettingServices, server.TTL)
 	if server.HasServices() {
 		return server.Services, nil
 	}
@@ -117,4 +117,17 @@ func (server *Server) registerRequest(service *Service) (RegisterResponse, error
 		return RegisterResponse{}, fmt.Errorf("unable to parse json: %w", err)
 	}
 	return response, nil
+}
+
+func (server *Server) Find(name string) (Service, error) {
+	services, err := server.GetServices()
+	if err != nil {
+		return Service{}, fmt.Errorf("unable to find %v service: %w", name, err)
+	}
+	for i := range services {
+		if services[i].Name == name {
+			return services[i], nil
+		}
+	}
+	return Service{}, errors.New("service not found")
 }
