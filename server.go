@@ -1,6 +1,7 @@
 package godiscoverer
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -81,6 +82,20 @@ func (server *Server) ForceRegister(service *Service) (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+func (server *Server) DoRegistering(service *Service, ctx context.Context) {
+	for {
+		select {
+		case <-time.Tick(time.Second):
+			_, err := server.Register(service)
+			if err != nil {
+				return
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 func (server *Server) Registered() bool {
