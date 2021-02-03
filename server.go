@@ -97,7 +97,7 @@ func (server *Server) ForceRegister(service *Service) (bool, error) {
 func (server *Server) DoRegistering(service *Service, ctx context.Context) {
 	for {
 		select {
-		case <-time.Tick(time.Second):
+		case <-time.Tick(time.Duration(server.TTL) * time.Second):
 			_, err := server.Register(service)
 			if err != nil {
 				return
