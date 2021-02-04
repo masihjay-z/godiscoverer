@@ -14,8 +14,8 @@ type Server struct {
 	Address             string
 	TTL                 int64
 	Services            []Service
-	lastRegistration    int64
 	lastGettingServices int64
+	registeredServices  map[string]int64
 }
 
 var defaultServer *Server
@@ -29,7 +29,7 @@ func GetDefaultServer() *Server {
 }
 
 func NewServer(address string, ttl int64) Server {
-	return Server{Address: address, TTL: ttl, lastRegistration: 0}
+	return Server{Address: address, TTL: ttl, registeredServices: make(map[string]int64)}
 }
 
 func (server *Server) GetAddress() string {
@@ -76,7 +76,7 @@ func (server *Server) HasServices() bool {
 }
 
 func (server *Server) Register(service *Service) (bool, error) {
-	if server.Registered() {
+	if server.Registered(service) {
 		return true, nil
 	}
 	return server.ForceRegister(service)
@@ -89,6 +89,7 @@ func (server *Server) ForceRegister(service *Service) (bool, error) {
 	}
 	if response.IsSuccess {
 		server.TTL = response.GetTTL()
+		server.updateRegisteredServices(service)
 		return true, nil
 	}
 	return false, nil
@@ -108,8 +109,13 @@ func (server *Server) DoRegistering(service *Service, ctx context.Context) {
 	}
 }
 
-func (server *Server) Registered() bool {
-	return time.Now().Unix() < server.lastRegistration+server.TTL
+func (server *Server) Registered(service *Service) bool {
+	for serviceName, registrationTime := range server.GetRegisteredServices() {
+		if service.Name == serviceName && time.Now().Unix() < registrationTime {
+			return true
+		}
+	}
+	return false
 }
 
 func (server *Server) registerRequest(service *Service) (RegisterResponse, error) {
@@ -140,4 +146,12 @@ func (server *Server) Find(name string) (Service, error) {
 		}
 	}
 	return Service{}, errors.New("service not found")
+}
+
+func (server *Server) updateRegisteredServices(service *Service) {
+	server.registeredServices[service.Name] = time.Now().Unix()
+}
+
+func (server *Server) GetRegisteredServices() map[string]int64 {
+	return server.registeredServices
 }
