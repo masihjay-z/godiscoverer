@@ -132,7 +132,6 @@ func (server *Server) registerRequest(service *Service) (RegisterResponse, error
 	}
 	response := newRegisterResponse()
 	err = json.NewDecoder(res.Body).Decode(&response)
-	fmt.Println(service.Name,response)
 	if err != nil {
 		return RegisterResponse{}, fmt.Errorf("unable to parse json: %w", err)
 	}
