@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -14,6 +15,7 @@ type Server struct {
 	Address             string
 	TTL                 int64
 	Services            []Service
+	maxRegisteringRetry int64
 	lastGettingServices int64
 	registeredServices  map[string]int64
 }
@@ -101,7 +103,7 @@ func (server *Server) DoRegistering(service *Service, ctx context.Context) {
 		case <-time.Tick(time.Duration(server.TTL) * time.Second):
 			_, err := server.Register(service)
 			if err != nil {
-				return
+				log.Println(err)
 			}
 		case <-ctx.Done():
 			return
