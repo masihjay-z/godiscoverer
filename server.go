@@ -32,7 +32,7 @@ func GetDefaultServer() *Server {
 }
 
 func NewServer(address string, ttl int64) Server {
-	return Server{Address: address, TTL: ttl, registeredServices: make(map[string]int64),updateServiceLock: sync.Mutex{}}
+	return Server{Address: address, TTL: ttl, registeredServices: make(map[string]int64), updateServiceLock: sync.Mutex{}}
 }
 
 func (server *Server) GetAddress() string {
@@ -102,9 +102,11 @@ func (server *Server) DoRegistering(service *Service, ctx context.Context) {
 	for {
 		select {
 		case <-time.Tick(time.Duration(server.TTL) * time.Second):
-			_, err := server.Register(service)
-			if err != nil {
-				log.Println(err)
+			res, err := server.Register(service)
+			if err != nil || res == false {
+				log.Printf("failed to register %v:%v\n", service.Name, err)
+			} else {
+				log.Printf("service %v registered successfully", service.Name)
 			}
 		case <-ctx.Done():
 			return
