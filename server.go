@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 )
 
@@ -15,9 +16,9 @@ type Server struct {
 	Address             string
 	TTL                 int64
 	Services            []Service
-	maxRegisteringRetry int64
 	lastGettingServices int64
 	registeredServices  map[string]int64
+	updateServiceLock   sync.Mutex
 }
 
 var defaultServer *Server
@@ -31,7 +32,7 @@ func GetDefaultServer() *Server {
 }
 
 func NewServer(address string, ttl int64) Server {
-	return Server{Address: address, TTL: ttl, registeredServices: make(map[string]int64)}
+	return Server{Address: address, TTL: ttl, registeredServices: make(map[string]int64),updateServiceLock: sync.Mutex{}}
 }
 
 func (server *Server) GetAddress() string {
@@ -151,7 +152,9 @@ func (server *Server) Find(name string) (Service, error) {
 }
 
 func (server *Server) updateRegisteredServices(service *Service) {
+	server.updateServiceLock.Lock()
 	server.registeredServices[service.Name] = time.Now().Unix()
+	server.updateServiceLock.Unlock()
 }
 
 func (server *Server) GetRegisteredServices() map[string]int64 {
