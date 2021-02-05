@@ -101,12 +101,10 @@ func (server *Server) ForceRegister(service *Service) (bool, error) {
 func (server *Server) DoRegistering(service *Service, ctx context.Context) {
 	for {
 		select {
-		case <-time.Tick(time.Duration(server.TTL) * time.Second):
+		case <-time.Tick(time.Duration(10) * time.Second):
 			res, err := server.Register(service)
 			if err != nil || res == false {
 				log.Printf("failed to register %v:%v\n", service.Name, err)
-			} else {
-				log.Printf("service %v registered successfully", service.Name)
 			}
 		case <-ctx.Done():
 			return
@@ -116,7 +114,7 @@ func (server *Server) DoRegistering(service *Service, ctx context.Context) {
 
 func (server *Server) Registered(service *Service) bool {
 	for serviceName, registrationTime := range server.GetRegisteredServices() {
-		if service.Name == serviceName && time.Now().Unix() < registrationTime {
+		if service.Name == serviceName && time.Now().Unix() < registrationTime+server.TTL {
 			return true
 		}
 	}
