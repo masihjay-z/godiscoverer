@@ -93,6 +93,7 @@ func (server *Server) ForceRegister(service *Service) (bool, error) {
 	if response.IsSuccess {
 		server.TTL = response.GetTTL()
 		server.updateRegisteredServices(service)
+		log.Printf("%v service register successfully", service.Name)
 		return true, nil
 	}
 	return false, nil
