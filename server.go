@@ -18,6 +18,7 @@ type Server struct {
 	Services            []Service
 	lastGettingServices int64
 	registeredServices  map[string]int64
+	registerServiceLock   sync.Mutex
 	updateServiceLock   sync.Mutex
 }
 
@@ -32,7 +33,7 @@ func GetDefaultServer() *Server {
 }
 
 func NewServer(address string, ttl int64) Server {
-	return Server{Address: address, TTL: ttl, registeredServices: make(map[string]int64), updateServiceLock: sync.Mutex{}}
+	return Server{Address: address, TTL: ttl, registeredServices: make(map[string]int64), registerServiceLock: sync.Mutex{}, updateServiceLock: sync.Mutex{}}
 }
 
 func (server *Server) GetAddress() string {
@@ -127,7 +128,9 @@ func (server *Server) registerRequest(service *Service) (RegisterResponse, error
 	data.Set("name", service.Name)
 	data.Set("host", service.Host)
 	data.Set("port", service.Port)
+	server.updateServiceLock.Lock()
 	res, err := http.PostForm(server.GetAddress(), data)
+	server.updateServiceLock.Unlock()
 	if err != nil {
 		return RegisterResponse{}, fmt.Errorf("unable to send request: %w", err)
 	}
