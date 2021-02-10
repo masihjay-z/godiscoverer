@@ -128,9 +128,9 @@ func (server *Server) registerRequest(service *Service) (RegisterResponse, error
 	data.Set("name", service.Name)
 	data.Set("host", service.Host)
 	data.Set("port", service.Port)
-	server.updateServiceLock.Lock()
+	server.registerServiceLock.Lock()
 	res, err := http.PostForm(server.GetAddress(), data)
-	server.updateServiceLock.Unlock()
+	server.registerServiceLock.Unlock()
 	if err != nil {
 		return RegisterResponse{}, fmt.Errorf("unable to send request: %w", err)
 	}
