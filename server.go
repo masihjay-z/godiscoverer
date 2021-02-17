@@ -18,7 +18,7 @@ type Server struct {
 	Services            []Service
 	lastGettingServices int64
 	registeredServices  map[string]int64
-	registerServiceLock   sync.Mutex
+	registerServiceLock sync.Mutex
 	updateServiceLock   sync.Mutex
 }
 
@@ -102,8 +102,9 @@ func (server *Server) ForceRegister(service *Service) (bool, error) {
 
 func (server *Server) DoRegistering(service *Service, ctx context.Context) {
 	for {
+		updateCtx, _ := context.WithTimeout(context.Background(), time.Duration(server.TTL)*time.Second)
 		select {
-		case <-time.Tick(time.Duration(10) * time.Second):
+		case <-updateCtx.Done():
 			res, err := server.Register(service)
 			if err != nil || res == false {
 				log.Printf("failed to register %v:%v\n", service.Name, err)
