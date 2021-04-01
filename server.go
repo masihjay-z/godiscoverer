@@ -13,13 +13,15 @@ import (
 )
 
 type Server struct {
-	Address             string
-	TTL                 int64
-	Services            []Service
-	lastGettingServices int64
-	registeredServices  map[string]int64
-	registerServiceLock   sync.Mutex
-	updateServiceLock   sync.Mutex
+	Address                string
+	TTL                    int64
+	Services               []Service
+	serviceResponseReader  ServiceResponseReader
+	registerResponseReader RegisterResponseReader
+	lastGettingServices    int64
+	registeredServices     map[string]int64
+	registerServiceLock    sync.Mutex
+	updateServiceLock      sync.Mutex
 }
 
 var defaultServer *Server
@@ -32,8 +34,16 @@ func GetDefaultServer() *Server {
 	return defaultServer
 }
 
-func NewServer(address string, ttl int64) Server {
-	return Server{Address: address, TTL: ttl, registeredServices: make(map[string]int64), registerServiceLock: sync.Mutex{}, updateServiceLock: sync.Mutex{}}
+func NewServer(address string, ttl int64, serviceResponseReader ServiceResponseReader, registerResponseReader RegisterResponseReader) Server {
+	return Server{
+		Address:                address,
+		TTL:                    ttl,
+		serviceResponseReader:  serviceResponseReader,
+		registerResponseReader: registerResponseReader,
+		registeredServices:     make(map[string]int64),
+		registerServiceLock:    sync.Mutex{},
+		updateServiceLock:      sync.Mutex{},
+	}
 }
 
 func (server *Server) GetAddress() string {
@@ -57,7 +67,7 @@ func (server *Server) ForceGetServices() ([]Service, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to getting services: %w", err)
 	}
-	server.Services = response.GetServices()
+	server.Services = server.serviceResponseReader.GetServices(&response)
 	server.lastGettingServices = time.Now().Unix()
 	return server.Services, nil
 }
@@ -92,7 +102,7 @@ func (server *Server) ForceRegister(service *Service) (bool, error) {
 		return false, fmt.Errorf("unable to register: %w", err)
 	}
 	if response.IsSuccess {
-		server.TTL = response.GetTTL()
+		server.TTL = server.registerResponseReader.GetTTL(&response)
 		server.updateRegisteredServices(service)
 		log.Printf("%v service register successfully", service.Name)
 		return true, nil
