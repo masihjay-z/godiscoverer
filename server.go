@@ -2,12 +2,9 @@ package godiscoverer
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
-	"net/http"
-	"net/url"
 	"sync"
 	"time"
 )
@@ -17,10 +14,11 @@ type Server struct {
 	TTL                    int64
 	Services               []Service
 	serviceResponseReader  ServiceResponseReader
-	registerResponseReader RegisterResponseReader
+	registerResponseReader RegistererResponseReader
+	serviceGetter          ServiceGetter
+	serviceRegisterer      ServiceRegisterer
 	lastGettingServices    int64
 	registeredServices     map[string]int64
-	registerServiceLock    sync.Mutex
 	updateServiceLock      sync.Mutex
 }
 
@@ -34,14 +32,15 @@ func GetDefaultServer() *Server {
 	return defaultServer
 }
 
-func NewServer(address string, ttl int64, serviceResponseReader ServiceResponseReader, registerResponseReader RegisterResponseReader) Server {
+func NewServer(address string, ttl int64, serviceResponseReader ServiceResponseReader, registerResponseReader RegistererResponseReader, serviceGetter ServiceGetter, serviceRegisterer ServiceRegisterer) Server {
 	return Server{
 		Address:                address,
 		TTL:                    ttl,
 		serviceResponseReader:  serviceResponseReader,
 		registerResponseReader: registerResponseReader,
+		serviceGetter:          serviceGetter,
+		serviceRegisterer:      serviceRegisterer,
 		registeredServices:     make(map[string]int64),
-		registerServiceLock:    sync.Mutex{},
 		updateServiceLock:      sync.Mutex{},
 	}
 }
@@ -63,26 +62,13 @@ func (server *Server) GetServices() ([]Service, error) {
 }
 
 func (server *Server) ForceGetServices() ([]Service, error) {
-	response, err := server.servicesRequest()
+	response, err := server.serviceGetter.GetServices(server)
 	if err != nil {
 		return nil, fmt.Errorf("unable to getting services: %w", err)
 	}
 	server.Services = server.serviceResponseReader.GetServices(&response)
 	server.lastGettingServices = time.Now().Unix()
 	return server.Services, nil
-}
-
-func (server *Server) servicesRequest() (ServiceResponse, error) {
-	res, err := http.Get(server.GetAddress())
-	if err != nil {
-		return ServiceResponse{}, fmt.Errorf("unable to send request: %w", err)
-	}
-	response := newServiceResponse()
-	err = json.NewDecoder(res.Body).Decode(&response)
-	if err != nil {
-		return ServiceResponse{}, fmt.Errorf("unable to parse response: %w", err)
-	}
-	return response, nil
 }
 
 func (server *Server) HasServices() bool {
@@ -97,7 +83,7 @@ func (server *Server) Register(service *Service) (bool, error) {
 }
 
 func (server *Server) ForceRegister(service *Service) (bool, error) {
-	response, err := server.registerRequest(service)
+	response, err := server.serviceRegisterer.Register(server, service)
 	if err != nil {
 		return false, fmt.Errorf("unable to register: %w", err)
 	}
@@ -132,25 +118,6 @@ func (server *Server) Registered(service *Service) bool {
 		}
 	}
 	return false
-}
-
-func (server *Server) registerRequest(service *Service) (RegisterResponse, error) {
-	data := url.Values{}
-	data.Set("name", service.Name)
-	data.Set("host", service.Host)
-	data.Set("port", service.Port)
-	server.registerServiceLock.Lock()
-	res, err := http.PostForm(server.GetAddress(), data)
-	server.registerServiceLock.Unlock()
-	if err != nil {
-		return RegisterResponse{}, fmt.Errorf("unable to send request: %w", err)
-	}
-	response := newRegisterResponse()
-	err = json.NewDecoder(res.Body).Decode(&response)
-	if err != nil {
-		return RegisterResponse{}, fmt.Errorf("unable to parse json: %w", err)
-	}
-	return response, nil
 }
 
 func (server *Server) Find(name string) (Service, error) {
