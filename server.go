@@ -13,7 +13,7 @@ type Server struct {
 	Address                string
 	TTL                    int64
 	Services               []Service
-	serviceResponseReader  ServiceResponseReader
+	serviceResponseReader  ServiceGetterResponseReader
 	registerResponseReader RegistererResponseReader
 	serviceGetter          ServiceGetter
 	serviceRegisterer      ServiceRegisterer
@@ -32,7 +32,7 @@ func GetDefaultServer() *Server {
 	return defaultServer
 }
 
-func NewServer(address string, ttl int64, serviceResponseReader ServiceResponseReader, registerResponseReader RegistererResponseReader, serviceGetter ServiceGetter, serviceRegisterer ServiceRegisterer) Server {
+func NewServer(address string, ttl int64, serviceResponseReader ServiceGetterResponseReader, registerResponseReader RegistererResponseReader, serviceGetter ServiceGetter, serviceRegisterer ServiceRegisterer) Server {
 	return Server{
 		Address:                address,
 		TTL:                    ttl,
