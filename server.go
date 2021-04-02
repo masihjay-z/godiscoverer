@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
-	"sync"
 	"time"
 )
 
@@ -19,7 +17,6 @@ type Server struct {
 	serviceRegisterer      ServiceRegisterer
 	lastGettingServices    int64
 	registeredServices     map[string]int64
-	updateServiceLock      sync.Mutex
 }
 
 var defaultServer *Server
@@ -41,7 +38,6 @@ func NewServer(address string, ttl int64, serviceResponseReader ServiceGetterRes
 		serviceGetter:          serviceGetter,
 		serviceRegisterer:      serviceRegisterer,
 		registeredServices:     make(map[string]int64),
-		updateServiceLock:      sync.Mutex{},
 	}
 }
 
@@ -90,23 +86,22 @@ func (server *Server) ForceRegister(service *Service) (bool, error) {
 	if response.IsSuccess {
 		server.TTL = server.registerResponseReader.GetTTL(&response)
 		server.updateRegisteredServices(service)
-		log.Printf("%v service register successfully", service.Name)
 		return true, nil
 	}
 	return false, nil
 }
 
-func (server *Server) DoRegistering(service *Service, ctx context.Context) {
+func (server *Server) DoRegistering(service *Service, ctx context.Context) error {
 	for {
 		updateCtx, _ := context.WithTimeout(context.Background(), time.Duration(server.TTL)*time.Second)
 		select {
 		case <-updateCtx.Done():
 			res, err := server.Register(service)
 			if err != nil || res == false {
-				log.Printf("failed to register %v:%v\n", service.Name, err)
+				return fmt.Errorf("failed to register %v:%v\n", service.Name, err)
 			}
 		case <-ctx.Done():
-			return
+			return nil
 		}
 	}
 }
@@ -134,9 +129,7 @@ func (server *Server) Find(name string) (Service, error) {
 }
 
 func (server *Server) updateRegisteredServices(service *Service) {
-	server.updateServiceLock.Lock()
 	server.registeredServices[service.Name] = time.Now().Unix()
-	server.updateServiceLock.Unlock()
 }
 
 func (server *Server) GetRegisteredServices() map[string]int64 {

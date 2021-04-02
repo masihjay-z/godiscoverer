@@ -1,12 +1,49 @@
 package godiscoverer
 
 import (
+	"context"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"sync"
 	"testing"
 	"time"
 )
+
+func TestGetDefaultServer(t *testing.T) {
+	defaultServer = &Server{}
+	assert.Same(t, defaultServer, GetDefaultServer())
+}
+
+func TestSetDefaultServer(t *testing.T) {
+	server := &Server{}
+	SetDefaultServer(server)
+	assert.Same(t, server, GetDefaultServer())
+}
+
+func TestNewServer(t *testing.T) {
+	serviceGetterReader := &DefaultServiceGetterResponseReader{}
+	serviceRegistererReader := &DefaultRegistererResponseReader{}
+	serviceGetter := &DefaultServiceGetter{}
+	serviceRegisterer := &DefaultServiceRegisterer{}
+	server := NewServer("localhost", int64(60), serviceGetterReader, serviceRegistererReader, serviceGetter, serviceRegisterer)
+	assert.Equal(t, server.Address, "localhost")
+	assert.Equal(t, server.TTL, int64(60))
+	assert.Equal(t,server.serviceResponseReader,serviceGetterReader)
+	assert.Equal(t,server.registerResponseReader,serviceRegistererReader)
+	assert.Equal(t,server.serviceGetter,serviceGetter)
+	assert.Equal(t,server.serviceRegisterer,serviceRegisterer)
+}
+
+func TestServer_GetAddress(t *testing.T) {
+	server:=Server{Address: "localhost"}
+	assert.Equal(t,server.Address,"localhost")
+}
+
+func TestServer_SetAddress(t *testing.T) {
+	server:=Server{Address: "localhost"}
+	server.SetAddress("localhost-2")
+	assert.Equal(t,server.Address,"localhost-2")
+}
 
 func TestServer_HasServices(t *testing.T) {
 	server := NewServer("localhost", 60, &DefaultServiceGetterResponseReader{}, &DefaultRegistererResponseReader{}, &DefaultServiceGetter{}, &DefaultServiceRegisterer{registerServiceLock: sync.Mutex{}})
@@ -74,6 +111,20 @@ func TestServer_Register(t *testing.T) {
 	assert.True(t, server.Registered(&service))
 }
 
+func TestServer_DoRegistering(t *testing.T) {
+	testRegisterer := new(MockedServiceRegisterer)
+
+	server := NewServer("localhost", 1, &DefaultServiceGetterResponseReader{}, &DefaultRegistererResponseReader{}, &DefaultServiceGetter{}, testRegisterer)
+	service := NewService("test-service", "test", "80")
+
+	testRegisterer.On("Register", &server, &service).Return(ServiceRegistererResponse{Message: "", Code: 200, IsSuccess: true, Data: int64(1)}, nil).Twice()
+	ctx, _ := context.WithTimeout(context.Background(), 2100*time.Millisecond)
+	server.DoRegistering(&service, ctx)
+	assert.True(t, server.Registered(&service))
+	testRegisterer.AssertExpectations(t)
+
+}
+
 type MockedServiceGetter struct {
 	mock.Mock
 }
@@ -94,7 +145,6 @@ func TestServer_Find(t *testing.T) {
 	assert.Equal(t, gottenService.Port, service.Port)
 	testGetter.AssertExpectations(t)
 
-
 	gottenServiceFromCache, _ := server.Find("test-service")
 	assert.Equal(t, gottenServiceFromCache.Port, service.Port)
 
@@ -103,4 +153,12 @@ func TestServer_Find(t *testing.T) {
 	gottenServiceWhenTTLExpired, _ := server.Find("test-service")
 	assert.Equal(t, gottenServiceWhenTTLExpired.Port, service.Port)
 	testGetter.AssertExpectations(t)
+}
+
+func TestServer_GetRegisteredServices(t *testing.T) {
+	server := NewServer("localhost", 60, &DefaultServiceGetterResponseReader{}, &DefaultRegistererResponseReader{}, &DefaultServiceGetter{}, &DefaultServiceRegisterer{})
+	service := NewService("test-service", "test", "8000")
+	services := map[string]int64{service.Name: int64(111)}
+	server.registeredServices = services
+	assert.Equal(t, server.GetRegisteredServices(), services)
 }
