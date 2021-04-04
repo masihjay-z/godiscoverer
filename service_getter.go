@@ -3,6 +3,7 @@ package godiscoverer
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/stretchr/testify/mock"
 	"net/http"
 )
 
@@ -23,4 +24,13 @@ func (getter *DefaultServiceGetter) GetServices(server *Server) (ServiceGetterRe
 		return ServiceGetterResponse{}, fmt.Errorf("unable to parse response: %w", err)
 	}
 	return response, nil
+}
+
+type MockedServiceGetter struct {
+	mock.Mock
+}
+
+func (getter *MockedServiceGetter) GetServices(server *Server) (ServiceGetterResponse, error) {
+	args := getter.Called(server)
+	return args.Get(0).(ServiceGetterResponse), args.Error(1)
 }

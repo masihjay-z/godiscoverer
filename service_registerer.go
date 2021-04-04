@@ -3,6 +3,7 @@ package godiscoverer
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/stretchr/testify/mock"
 	"net/http"
 	"net/url"
 	"sync"
@@ -33,4 +34,13 @@ func (registerer *DefaultServiceRegisterer) Register(server *Server, service *Se
 		return ServiceRegistererResponse{}, fmt.Errorf("unable to parse json: %w", err)
 	}
 	return response, nil
+}
+
+type MockedServiceRegisterer struct {
+	mock.Mock
+}
+
+func (registerer *MockedServiceRegisterer) Register(server *Server, service *Service) (ServiceRegistererResponse, error) {
+	args := registerer.Called(server, service)
+	return args.Get(0).(ServiceRegistererResponse), args.Error(1)
 }

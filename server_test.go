@@ -3,7 +3,6 @@ package godiscoverer
 import (
 	"context"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"sync"
 	"testing"
 	"time"
@@ -68,15 +67,6 @@ func TestServer_Registered(t *testing.T) {
 	assert.False(t, server.Registered(&service), "server Registered method should return false but return true, when ttl expired!")
 }
 
-type MockedServiceRegisterer struct {
-	mock.Mock
-}
-
-func (registerer *MockedServiceRegisterer) Register(server *Server, service *Service) (ServiceRegistererResponse, error) {
-	args := registerer.Called(server, service)
-	return args.Get(0).(ServiceRegistererResponse), args.Error(1)
-}
-
 func TestServer_ForceRegister(t *testing.T) {
 	testRegisterer := new(MockedServiceRegisterer)
 
@@ -123,15 +113,6 @@ func TestServer_DoRegistering(t *testing.T) {
 	assert.True(t, server.Registered(&service))
 	testRegisterer.AssertExpectations(t)
 
-}
-
-type MockedServiceGetter struct {
-	mock.Mock
-}
-
-func (getter *MockedServiceGetter) GetServices(server *Server) (ServiceGetterResponse, error) {
-	args := getter.Called(server)
-	return args.Get(0).(ServiceGetterResponse), args.Error(1)
 }
 
 func TestServer_Find(t *testing.T) {
