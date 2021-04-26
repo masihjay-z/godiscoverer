@@ -19,9 +19,10 @@ type DefaultServiceGetterResponseReader struct{}
 
 func (response *DefaultServiceGetterResponseReader) GetServices(serviceGetterResponse *ServiceGetterResponse) []Service {
 	var services []Service
-	interfaces := serviceGetterResponse.Data.([]map[string]interface{})
+	interfaces := serviceGetterResponse.Data.([]interface{})
 	for i := range interfaces {
-		services = append(services, Service{Host: interfaces[i]["host"].(string), Port: interfaces[i]["port"].(string), Name: interfaces[i]["name"].(string)})
+		serviceInterface := interfaces[i].(map[string]interface{})
+		services = append(services, Service{Host: serviceInterface["host"].(string), Port: serviceInterface["port"].(string), Name: serviceInterface["name"].(string)})
 	}
 	return services
 }
